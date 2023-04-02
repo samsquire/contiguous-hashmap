@@ -12,9 +12,11 @@ struct hashmap_key {
 };
 struct hashmap_value {
     char value[1024];
+    int nested;
 };
 
 struct hashmap {
+    int id;
     struct hashmap_key key[MAX_SIZE];       
     struct hashmap_value value[MAX_SIZE]; 
 };
@@ -41,9 +43,21 @@ int set_hashmap(struct hashmap *hashmap, char key[], char value[]) {
     memcpy(&(*hashmap).key[hsh], key, MAX_SIZE); 
     memcpy(&(*hashmap).value[hsh], value, MAX_SIZE); 
 }
+
+int set_hashmap_nested(struct hashmap *hashmap, char key[], struct hashmap *nested) {
+    unsigned long hsh = hash(key) % MAX_SIZE;
+    memcpy(&(*hashmap).key[hsh], key, MAX_SIZE); 
+    hashmap->value[hsh].nested = nested->id;
+}
+
 struct hashmap_value get_hashmap(struct hashmap *hashmap, char key[]) {
     unsigned long hsh = hash(key) % MAX_SIZE;
     return (*hashmap).value[hsh];
+}
+struct hashmap_value get_hashmap_nested(struct hashmap *hashmaps, struct hashmap *hashmap, char key[], char subkey[]) {
+    unsigned long hsh = hash(key) % MAX_SIZE;
+    int nested = (*hashmap).value[hsh].nested;
+    return get_hashmap(&hashmaps[nested], subkey);
 }
 
 void *clone_benchmark(void *args) {
@@ -59,13 +73,19 @@ void *clone_benchmark(void *args) {
 }
 
 int main() {
-    struct hashmap *hashmap = malloc(sizeof(struct hashmap));
+    struct hashmap *hashmap = calloc(10, sizeof(struct hashmap));
+    for (int i = 0 ; i < 10; i++) {
+        hashmap[i].id = i;
+    }
     struct work_def *work = malloc(sizeof(struct work_def));
     work->running = 1;
     work->hashmap = hashmap;
     work->count = 0;
-    set_hashmap(hashmap, "hello", "world");
+    set_hashmap(&hashmap[0], "hello", "world");
+    set_hashmap(&hashmap[1], "nested", "inside");
+    set_hashmap_nested(hashmap, "nested", &hashmap[1]);
     printf("Found item in hashmap: %s\n", get_hashmap(hashmap, "hello").value);
+    printf("Found item in nested hashmap: %s\n", get_hashmap_nested(hashmap, &hashmap[0], "nested", "nested").value);
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, clone_benchmark, work);
     unsigned long hashmap_size = sizeof(struct hashmap);
