@@ -26,6 +26,7 @@ struct work_def {
     int count;
 };
 
+// from https://stackoverflow.com/a/7666577/10662977
 unsigned long
 hash(unsigned char *str)
 {

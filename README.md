@@ -7,3 +7,7 @@ One of the obstacles of left-right concurrency control is the memory usage, we h
 This allows every thread to read/write in parallel for maximum throughput, at the cost of memory usage.
 
 I was curious how easy it was to create a hashmap that was contiguous, for cheap copies. On my machine it can copy 52GB in 5 seconds.
+
+# credits
+
+Hash function is by djb2 from https://stackoverflow.com/a/7666577/10662977
