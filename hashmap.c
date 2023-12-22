@@ -70,6 +70,7 @@ void *clone_benchmark(void *args) {
         memcpy(&hashmaps[current++], work->hashmap, sizeof(struct hashmap)); 
         current = current % MAX_SIZE; 
         work->count++;
+        asm("sfence":::"memory");    
     }
 }
 
@@ -94,11 +95,11 @@ int main() {
 
     sleep(5);
     work->running = 0;
-
+    asm ("sfence" ::: "memory"); 
     printf("Benchmark run: %ldGB\n\n", (work->count * hashmap_size) / 1024 / 1024 / 1024);
     pthread_join(thread_id, NULL);
-
-    sleep(600);
+    printf("finished\n");
+    // sleep(600);
       
     return 0;
 }
