@@ -99,18 +99,50 @@ struct hashmap_value get_hashmap_nested(struct hashmap *hashmaps, struct hashmap
 }
 */
 
+int print_hashmap_pair(int depth, int size, struct hashmap_pair* item) {
+    char spaces[depth + 1];
+    for (int x = 0 ; x < depth ; x++) {
+      spaces[x] = ' ';
+    }
+    spaces[depth] = 0;
+
+    if (item->set == 1 && item->nested) {
+      printf("%s%s = %p (nested)\n", spaces, item->key, (char*)item->value);  
+      for (int x = 0 ; x < size; x++) {
+        struct hashmap_pair *newitem = &(((struct hashmap_pair*)item->value))[x];
+        print_hashmap_pair(depth + 1, size, newitem);
+      }
+
+    } else if (item->set == 1) {    
+      printf("%s%s = %s\n", spaces, item->key, (char*)item->value);  
+    }
+}
+int print_hashmap(struct Hashmap* hashmap) {
+  for (int x = 0 ; x < hashmap->size; x++) {
+    struct hashmap_pair *item = &(((struct hashmap_pair*)hashmap->start))[x];
+    print_hashmap_pair(0, hashmap->size, item);
+  }
+}
+
 int main() {
   int hashmaps = 5;
   int size = 1024;
   int count = 0;
   struct Hashmap **maps = calloc(hashmaps, sizeof(struct Hashmap*));
-  struct Arena backing = newarena(hashmaps * size * (sizeof(struct hashmap_pair)));
+  long memory = hashmaps * size * (sizeof(struct hashmap_pair));
+  printf("%ld bytes\n", memory);
+  struct Arena backing = newarena(memory);
   for (int x = 0 ; x < hashmaps ; x++) {
-    uintptr_t hashmap_start = (uintptr_t) backing.beg + ((x * hashmaps) * sizeof(struct hashmap_pair));
+    long offset = x * (size * sizeof(struct hashmap_pair));
+    printf("%ld offset\n", offset);
+    uintptr_t hashmap_start = (uintptr_t) backing.beg + offset;
     for (int n = 0 ; n < size ; n++) {
       // printf("%p\n", &((struct hashmap_pair*)hashmap_start)[n]);
+
       ((struct hashmap_pair*)hashmap_start)[n].value = 6;
+      ((struct hashmap_pair*)hashmap_start)[n].nested = 0;
     }
+    printf("%d\n", x);
     struct Hashmap *hashmap = calloc(1, sizeof(struct Hashmap));
     hashmap->id = x;
     hashmap->start = hashmap_start;
@@ -125,14 +157,11 @@ int main() {
   char * key2 = "world";
   set_hashmap(maps[0], key1, strlen(key1), (uintptr_t) data, PRIMITIVE);
   set_hashmap(maps[0], key2, strlen(key2), maps[1]->start, NESTED);
+  set_hashmap(maps[1], key2, strlen(key2), (uintptr_t)data, PRIMITIVE);
   // printf("%s\n", (char*)get_hashmap(maps[0], "hello"));
 
-  for (int x = 0 ; x < maps[0]->size; x++) {
-    struct hashmap_pair *item = &(((struct hashmap_pair*)maps[0]->start))[x];
-    if (item->set == 1 && item->nested) {
-      printf("%s = %p (nested)\n", item->key, (char*)item->value);  
-    } else if (item->set == 1) {    
-      printf("%s = %s\n", item->key, (char*)item->value);  
-    }
-  }
+
+  printf("%ld\n", maps[1]->start - maps[0]->start);
+  print_hashmap(maps[0]);
+
 }
