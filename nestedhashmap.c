@@ -137,9 +137,9 @@ int print_hashmap_pair(struct Hashmap *hashmap, int depth, int size, struct hash
     spaces[depth] = 0;
 
     if (item->set == 1 && item->nested == NESTED) {
-      printf("%s%s = %p (nested)\n", spaces, (char*) item->key, (char*)item->value);  
+      printf("%s%s = %p (nested)\n", spaces, (char*) hashmap->arena->primstart + item->key, (char*)hashmap->arena->primstart + item->value);  
       for (int x = 0 ; x < size; x++) {
-        struct hashmap_pair *newitem = &(((struct hashmap_pair*)item->value))[x];
+        struct hashmap_pair *newitem = &(((struct hashmap_pair*)hashmap->arena->beg + item->value))[x];
         print_hashmap_pair(hashmap, depth + 1, size, newitem);
       }
 
@@ -238,9 +238,12 @@ int main() {
   char * _key1 = alloc_prim(&backing, strlen(key1), 64, 1);
   memcpy(_key1, key1, strlen(key1));
 
+  char * _key2 = alloc_prim(&backing, strlen(key2), 64, 1);
+  memcpy(_key2, key2, strlen(key2));
+
   set_hashmap(maps[0], _key1, strlen(_key1), (uintptr_t) _data, PRIMITIVE);
-  // set_hashmap(maps[0], key2, strlen(key2), maps[1]->start, NESTED);
-  // set_hashmap(maps[1], key2, strlen(key2), (uintptr_t)data, PRIMITIVE);
+  set_hashmap(maps[0], _key2, strlen(_key2), maps[1]->start, NESTED);
+  set_hashmap(maps[1], _key2, strlen(_key2), (uintptr_t)_data, PRIMITIVE);
   // set_hashmap(maps[1], key3, strlen(key3), maps[2]->start, NESTED);
   // set_hashmap(maps[2], key4, strlen(key4), (uintptr_t) key5, PRIMITIVE);
   // printf("%s\n", (char*)get_hashmap(maps[0], "hello"));
