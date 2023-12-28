@@ -76,6 +76,17 @@ struct Arena newarena(ptrdiff_t capacity, ptrdiff_t primstart)
     return a;
 }
 
+struct Arena * clonearena(struct Arena arena) {
+  struct Arena * copy = calloc(1, sizeof(struct Arena));
+  copy->beg = malloc(arena.size); 
+  memcpy(copy->beg, arena.beg, arena.size);
+  copy->size = arena.size;
+  copy->end = arena.end;
+  copy->primstart = arena.primstart;
+  copy->primcurrent = arena.primcurrent;
+  return copy;
+}
+
 int set_hashmap(struct Hashmap *hashmap, char *key, int key_size, uintptr_t value, int nested) {
     unsigned long hsh = hash(key) % hashmap->size;
     struct hashmap_pair *item = &((struct hashmap_pair*)hashmap->start)[hsh];
@@ -143,6 +154,39 @@ int print_hashmap(struct Hashmap* hashmap) {
   }
 }
 
+struct Hashmap ** clonehashmaps(struct Arena *backing, int hashmaps, struct Hashmap **maps, int size) {
+
+  struct Arena *clarena = clonearena(*backing);
+  struct Arena clone = *clarena;
+
+  struct Hashmap **cloned = calloc(hashmaps, sizeof(struct Hashmap*));
+  int count = 0;
+  for (int x = 0 ; x < hashmaps ; x++) {
+    long offset = x * (size * sizeof(struct hashmap_pair));
+    printf("%ld offset\n", offset);
+    printf("%ld clone beg\n", (uintptr_t) clone.beg);
+    uintptr_t hashmap_start = (uintptr_t) clone.beg + (uintptr_t) maps[x]->arena->beg - maps[x]->start;
+    /*
+    for (int n = 0 ; n < size ; n++) {
+      // printf("%p\n", &((struct hashmap_pair*)hashmap_start)[n]);
+
+      ((struct hashmap_pair*)hashmap_start)[n].value = 6;
+      ((struct hashmap_pair*)hashmap_start)[n].nested = 0;
+    }
+    */
+    printf("%d\n", x);
+    struct Hashmap *hashmap = calloc(1, sizeof(struct Hashmap));
+    hashmap->arena = clarena;
+    hashmap->id = x;
+    hashmap->start = hashmap_start;
+    printf("start %p\n", (char*) hashmap_start); 
+    
+    hashmap->size = size;
+    cloned[count++] = hashmap;
+  }
+  return cloned;
+}
+
 int main() {
   int hashmaps = 5;
   int size = 1024;
@@ -199,5 +243,6 @@ int main() {
 
   printf("%ld\n", maps[1]->start - maps[0]->start);
   print_hashmap(maps[0]);
-  
+  struct Hashmap **clonedmaps = clonehashmaps(&backing, hashmaps, maps, size);
+  print_hashmap(clonedmaps[0]);
 }
