@@ -14,6 +14,7 @@ struct Arena {
     ptrdiff_t size;
     char *primstart;
     char *primcurrent;
+    long primcapacity;
 };
 
 struct hashmap_key {
@@ -73,6 +74,7 @@ struct Arena newarena(ptrdiff_t capacity, ptrdiff_t primstart)
     a.end = a.beg ? a.beg + capacity : 0;
     a.primstart = a.beg + primstart;
     a.primcurrent = a.primstart;
+    a.primcapacity = primstart;
     return a;
 }
 
@@ -82,8 +84,8 @@ struct Arena * clonearena(struct Arena arena) {
   memcpy(copy->beg, arena.beg, arena.size);
   copy->size = arena.size;
   copy->end = arena.end;
-  copy->primstart = arena.primstart;
-  copy->primcurrent = arena.primcurrent;
+  copy->primstart = copy->beg + arena.primcapacity;
+  copy->primcurrent = copy->beg + (arena.primcurrent - arena.beg);
   return copy;
 }
 
@@ -142,9 +144,13 @@ int print_hashmap_pair(struct Hashmap *hashmap, int depth, int size, struct hash
       }
 
     } else if (item->set == 1) {    
-      printf("%s%s = %s\n", spaces,
-        (char*)((uintptr_t)hashmap->arena->primstart + item->key),
-        (char*)hashmap->arena->primstart + item->value);  
+      uintptr_t key_start = ((uintptr_t)hashmap->arena->primstart + item->key);
+      uintptr_t value_start = ((uintptr_t)hashmap->arena->primstart + item->value);
+      printf("%s%s (%lx) = %s (%lx)\n", spaces,
+        (char*)key_start,
+        key_start,
+        (char*)value_start,  
+        value_start);  
     }
 }
 int print_hashmap(struct Hashmap* hashmap) {
@@ -157,15 +163,14 @@ int print_hashmap(struct Hashmap* hashmap) {
 struct Hashmap ** clonehashmaps(struct Arena *backing, int hashmaps, struct Hashmap **maps, int size) {
 
   struct Arena *clarena = clonearena(*backing);
-  struct Arena clone = *clarena;
 
   struct Hashmap **cloned = calloc(hashmaps, sizeof(struct Hashmap*));
   int count = 0;
   for (int x = 0 ; x < hashmaps ; x++) {
     long offset = x * (size * sizeof(struct hashmap_pair));
     printf("%ld offset\n", offset);
-    printf("%ld clone beg\n", (uintptr_t) clone.beg);
-    uintptr_t hashmap_start = (uintptr_t) clone.beg + (uintptr_t) maps[x]->arena->beg - maps[x]->start;
+    printf("%ld clone beg\n", (uintptr_t) clarena->beg);
+    uintptr_t hashmap_start = (uintptr_t) clarena->beg + (uintptr_t) maps[x]->arena->beg - maps[x]->start;
     /*
     for (int n = 0 ; n < size ; n++) {
       // printf("%p\n", &((struct hashmap_pair*)hashmap_start)[n]);
