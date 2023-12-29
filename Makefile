@@ -3,7 +3,7 @@ PROGRAMS=$(subst .c,,$(CFILES))
 
 default: $(PROGRAMS)
 $(PROGRAMS): $(CFILES)
-	gcc -o $(basename $@) $(basename $@).c -g -O3
+	gcc -o $(basename $@) $(basename $@).c -g
 
 debug:
 	echo $(CFILES) ;
